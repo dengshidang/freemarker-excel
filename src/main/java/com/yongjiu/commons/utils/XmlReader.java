@@ -1,12 +1,15 @@
 package com.yongjiu.commons.utils;
 
 import com.yongjiu.entity.excel.*;
+import org.apache.poi.ss.usermodel.DataValidation;
 import org.dom4j.Document;
 import org.dom4j.Element;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * author yongjiu
@@ -134,10 +137,39 @@ public class XmlReader {
 			String name = sheet.attributeValue("Name");
 			worksheet.setName(name);
 			Table table = getTable(sheet);
+			List<DataValidations> dataValidation = getDataValidation(sheet);
+			worksheet.setDataValidationList(dataValidation);
 			worksheet.setTable(table);
 			worksheets.add(worksheet);
 		}
 		return worksheets;
+	}
+
+	private static List<DataValidations> getDataValidation(Element sheet) {
+		List<Element> elementList = sheet.elements("DataValidation");
+		List<DataValidations> dataValidations = new ArrayList<>();
+		if(elementList!=null && !elementList.isEmpty()){
+			for (Element element : elementList) {
+				Element range = element.element("Range");
+				String rangeText = range.getText();
+				Element value = element.element("Value");
+				String valueText  = value.getText();
+				int[] rs = matchFindRowOrCol(rangeText, "R");
+				int[] cs = matchFindRowOrCol(rangeText, "C");
+				dataValidations.add(new DataValidations(valueText,rs[0],rs[1]-1,cs[0],cs[1]));
+			}
+		}
+		return dataValidations;
+	}
+	private static int[] matchFindRowOrCol(String valueText,String tag){
+		int[]  d = new int[2];
+		Pattern pattern = Pattern.compile("["+tag+"]{1}\\d+");
+		Matcher matcher = pattern.matcher(valueText);
+		matcher.find();
+		d[0] = Integer.parseInt(matcher.group(0).replace(tag,""));
+		matcher.find();
+		d[1] = Integer.parseInt(matcher.group(0).replace(tag,""));
+		return d;
 	}
 
 	private static Table getTable(Element sheet) {
@@ -175,7 +207,6 @@ public class XmlReader {
 		// 读取列
 		List<Column> columns = getColumns(tableElement, expandedColumnCount, defaultColumnWidth);
 		table.setColumns(columns);
-
 		// 读取行
 		List<Row> rows = getRows(tableElement);
 		table.setRows(rows);

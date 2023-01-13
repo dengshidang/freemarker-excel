@@ -7,15 +7,14 @@ import com.yongjiu.entity.excel.Row;
 import com.yongjiu.entity.excel.Table;
 import com.yongjiu.entity.excel.*;
 import com.yongjiu.util.ColorUtil;
-import freemarker.template.Configuration;
-import freemarker.template.Template;
-import freemarker.template.TemplateExceptionHandler;
+import freemarker.template.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.Comment;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.RegionUtil;
 import org.apache.poi.xssf.usermodel.*;
 import org.dom4j.Document;
@@ -29,10 +28,11 @@ import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletResponse;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /**
  * author 大脑补丁
@@ -291,6 +291,8 @@ public class FreemarkerUtils {
 				}
 				// 添加合并单元格
 				addCellRange(sheet, cellRangeAddresses);
+				// 添加下拉
+				addDataValidation(sheet,worksheet);
 			}
 			// 加载图片到excel
 			log.debug("4.开始写入图片：" + freemarkerInput.getExcelImageInputs());
@@ -319,7 +321,7 @@ public class FreemarkerUtils {
 	 * @param freemarkerInput
 	 * @param outputStream
 	 */
-	private static void createExcelToStream(FreemarkerInput freemarkerInput, OutputStream outputStream) {
+	public static void createExcelToStream(FreemarkerInput freemarkerInput, OutputStream outputStream) {
 		Writer out = null;
 		try {
 			// 创建xml文件
@@ -407,6 +409,9 @@ public class FreemarkerUtils {
 				}
 				// 添加合并单元格
 				addCellRange(sheet, cellRangeAddresses);
+				// 添加下拉
+				addDataValidation(sheet,worksheet);
+
 			}
 			// 加载图片到excel
 			log.debug("4.开始写入图片：" + freemarkerInput.getExcelImageInputs());
@@ -424,6 +429,24 @@ public class FreemarkerUtils {
 			try {
 				out.close();
 			} catch (Exception e) {
+			}
+		}
+	}
+
+	private static void addDataValidation(Sheet sheet, Worksheet worksheet) {
+		List<DataValidations> dataValidationList = worksheet.getDataValidationList();
+		if(dataValidationList!=null && !dataValidationList.isEmpty()){
+			for (DataValidations dataValidations : dataValidationList) {
+				CellRangeAddressList rangeAddressList =
+						new CellRangeAddressList(dataValidations.getStartRow()-1,
+								dataValidations.getEndRow()-1,dataValidations.getStartCol()-1,dataValidations.getEndCol()-1);
+				DataValidationHelper dataValidationHelper = sheet.getDataValidationHelper();
+				DataValidationConstraint dataValidationConstraint = dataValidationHelper.createExplicitListConstraint(dataValidations.getValueText().split(","));
+				DataValidation dataValidation = dataValidationHelper.createValidation(dataValidationConstraint, rangeAddressList);
+				dataValidation.setSuppressDropDownArrow(true);
+				dataValidation.setShowPromptBox(true);
+				dataValidation.setEmptyCellAllowed(true);
+				sheet.addValidationData(dataValidation);
 			}
 		}
 	}
@@ -986,4 +1009,31 @@ public class FreemarkerUtils {
 		}
 	}
 
+	public static void main(String[] args) {
+		Map<String,Object> data = new HashMap(){
+			{
+				put("admins", "deng-001,deng002,deng003");
+				put("detpNames", "部门1,部门2,部门3,部门4");
+				put("companys", "公司1,公司2,公司3,公司4,公司5");
+				put("godownNames", "深圳,北京,武汉,大连,厦门");
+				put("assetsSources", "采购,租赁");
+				put("assetsTypeNames", "办公/电脑1,办公/电脑2,办公/电脑3,办公/电脑4,办公/电脑5");
+			}};
+////         这个导出没有下拉
+		FreemarkerInput freemarkerInput = new FreemarkerInput();
+		//设置freemarker模板路径
+		freemarkerInput.setTemplateFilePath("/");
+		//模板名字
+		freemarkerInput.setTemplateName("资产导入模块.ftl");
+		//缓存xml路径
+		freemarkerInput.setXmlTempFile(System.getProperty("java.io.tmpdir"));
+		//缓存xml名字
+		freemarkerInput.setFileName(System.currentTimeMillis() +"_tmpXml");
+		//设置freemarker模板数据
+		freemarkerInput.setDataMap(data);
+
+		//导出Excel到输出流（Excel2007版及以上，xlsx格式）速度快
+		FreemarkerUtils.exportImageExcelNew("D:\\code\\export-test\\资产导入-模板.xlsx", freemarkerInput);
+
+	}
 }
