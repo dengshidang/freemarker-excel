@@ -11,13 +11,24 @@ public class DataValidations {
     private int endRow;
     private int startCol;
     private int endCol;
+    private boolean isformula;
 
-    public DataValidations(String valueText, int startRow, int endRow, int startCol, int endCol) {
+
+    public DataValidations(String valueText, int startRow, int endRow, int startCol, int endCol, boolean isformula) {
         this.valueText = valueText;
         this.startRow = startRow;
         this.endRow = endRow;
         this.startCol = startCol;
         this.endCol = endCol;
+        this.isformula = isformula;
+    }
+
+    public boolean getIsformula() {
+        return isformula;
+    }
+
+    public void setIsformula(boolean isformula) {
+        this.isformula = isformula;
     }
 
     public String getValueText() {

@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -413,6 +414,14 @@ public class FreemarkerUtils {
 				addDataValidation(sheet,worksheet);
 
 			}
+			List<String> hideSheetNames = freemarkerInput.getHideSheetNames();
+			//设置隐藏
+			if(hideSheetNames!=null && !hideSheetNames.isEmpty() ){
+				for (String hideSheetName : hideSheetNames) {
+					int sheetIndex = wb.getSheetIndex(hideSheetName);
+					wb.setSheetHidden(sheetIndex,true);
+				}
+			}
 			// 加载图片到excel
 			log.debug("4.开始写入图片：" + freemarkerInput.getExcelImageInputs());
 			if (!CollectionUtils.isEmpty(freemarkerInput.getExcelImageInputs())) {
@@ -441,7 +450,9 @@ public class FreemarkerUtils {
 						new CellRangeAddressList(dataValidations.getStartRow()-1,
 								dataValidations.getEndRow()-1,dataValidations.getStartCol()-1,dataValidations.getEndCol()-1);
 				DataValidationHelper dataValidationHelper = sheet.getDataValidationHelper();
-				DataValidationConstraint dataValidationConstraint = dataValidationHelper.createExplicitListConstraint(dataValidations.getValueText().split(","));
+				DataValidationConstraint dataValidationConstraint = dataValidations.getIsformula()?
+						dataValidationHelper.createFormulaListConstraint(dataValidations.getValueText()):
+						dataValidationHelper.createExplicitListConstraint(dataValidations.getValueText().split(","));
 				DataValidation dataValidation = dataValidationHelper.createValidation(dataValidationConstraint, rangeAddressList);
 				dataValidation.setSuppressDropDownArrow(true);
 				dataValidation.setShowPromptBox(true);
@@ -1010,30 +1021,41 @@ public class FreemarkerUtils {
 	}
 
 	public static void main(String[] args) {
-		Map<String,Object> data = new HashMap(){
-			{
-				put("admins", "deng-001,deng002,deng003");
-				put("detpNames", "部门1,部门2,部门3,部门4");
-				put("companys", "公司1,公司2,公司3,公司4,公司5");
-				put("godownNames", "深圳,北京,武汉,大连,厦门");
-				put("assetsSources", "采购,租赁");
-				put("assetsTypeNames", "办公/电脑1,办公/电脑2,办公/电脑3,办公/电脑4,办公/电脑5");
-			}};
-////         这个导出没有下拉
-		FreemarkerInput freemarkerInput = new FreemarkerInput();
-		//设置freemarker模板路径
-		freemarkerInput.setTemplateFilePath("/");
-		//模板名字
-		freemarkerInput.setTemplateName("资产导入模块.ftl");
-		//缓存xml路径
-		freemarkerInput.setXmlTempFile(System.getProperty("java.io.tmpdir"));
-		//缓存xml名字
-		freemarkerInput.setFileName(System.currentTimeMillis() +"_tmpXml");
-		//设置freemarker模板数据
-		freemarkerInput.setDataMap(data);
-
-		//导出Excel到输出流（Excel2007版及以上，xlsx格式）速度快
-		FreemarkerUtils.exportImageExcelNew("D:\\code\\export-test\\资产导入-模板.xlsx", freemarkerInput);
+//		List<String> detpNameList = Stream.of("宏能微电子/销售部/深圳销售/Alex组,宏能微电子/销售部/深圳销售/Fiona组,宏能微电子/销售部/上海销售,宏能微电子/销售部/苏州销售/Rikky组,宏能微电子/销售部/苏州销售/Sara组,宏能微电子/销售部/武汉销售,宏能微电子/销售部/天津销售,宏能微电子/销售部/厦门销售,宏能微电子/销售部/南京销售,宏能微电子/市场部,宏能微电子/采购部/亚洲采购部,宏能微电子/物流部,宏能微电子/品质部,宏能微电子/行政部,壹探网络/研发部,壹探网络/数据部,壹探网络/运营部,宏能微电子/管理层,宏能微电子/财务部,宏能微电子/销售部/深圳销售/Summer组".split(",")).collect(Collectors.toList());
+//		List<String> typeNameList = Stream.of("办公/电脑1,办公/电脑2,办公/电脑3,办公/电脑4,办公/电脑5".split(",")).collect(Collectors.toList());
+//		String assetsTypeName = "资产分类";
+//		String detpName = "使用部门";
+//		Map<String,Object> data = new HashMap(){
+//			{
+//				put("admins", "deng-001,deng002,deng003");
+//				put("detpName", detpName+"!$A$1:$A$"+detpNameList.size());
+////				put("detpNames", "壹探网络/研发部,壹探网络/数据部,壹探网络/运营部,宏能微电子/管理层,宏能微电子/财务部,宏能微电子/销售部/深圳销售/Summer组,宏能微电子/销售部/深圳销售/Bella组,宏能微电子/销售部/深圳销售/Ella组,宏能微电子/销售部/深圳销售/Louis组");
+//				put("deptNameList",detpNameList );
+//				put("deptNameSize",detpNameList.size()+2);
+//
+//				put("companys", "公司1,公司2,公司3,公司4,公司5");
+//				put("godownNames", "深圳,北京,武汉,大连,厦门");
+//				put("assetsSources", "采购,租赁");
+//				put("assetsTypeName",assetsTypeName+"!$A$1:$A$"+typeNameList.size());
+//				put("assetsTypeNameList",typeNameList);
+//				put("assetsTypeNameSize",typeNameList.size()+2);
+//			}};
+//////         这个导出没有下拉
+//		FreemarkerInput freemarkerInput = new FreemarkerInput();
+//		//设置freemarker模板路径
+//		freemarkerInput.setTemplateFilePath("/");
+//		freemarkerInput.setHideSheetNames(Stream.of(assetsTypeName,detpName).collect(Collectors.toList()));
+//		//模板名字
+//		freemarkerInput.setTemplateName("资产导入模块.ftl");
+//		//缓存xml路径
+//		freemarkerInput.setXmlTempFile(System.getProperty("java.io.tmpdir"));
+//		//缓存xml名字
+//		freemarkerInput.setFileName(System.currentTimeMillis() +"_tmpXml");
+//		//设置freemarker模板数据
+//		freemarkerInput.setDataMap(data);
+//
+//		//导出Excel到输出流（Excel2007版及以上，xlsx格式）速度快
+//		FreemarkerUtils.exportImageExcelNew("D:\\code\\export-test\\资产导入-模板.xlsx", freemarkerInput);
 
 	}
 }

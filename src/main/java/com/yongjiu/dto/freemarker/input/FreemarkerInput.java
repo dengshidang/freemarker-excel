@@ -40,5 +40,9 @@ public class FreemarkerInput {
 	 * 插入图片信息
 	 */
 	List<ExcelImageInput> excelImageInputs;
+	/**
+	 * 隐藏sheet
+	 */
+	List<String> hideSheetNames;
 
 }
